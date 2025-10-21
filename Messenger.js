@@ -135,46 +135,52 @@ export default function Messenger() {
   };
 
 const pickImage = async () => {
-  // Ask for permission
-  const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-  if (status !== 'granted') {
-    alert('Permission to access gallery is required!');
-    return;
-  }
+  try {
+    // Ask for permission
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      alert('Permission to access gallery is required!');
+      return;
+    }
 
-  // Open gallery
-  const result = await ImagePicker.launchImageLibraryAsync({
-    mediaTypes: [ImagePicker.MediaType.image], // fixed syntax
-    allowsEditing: true,
-    quality: 0.8,
-  });
+    // Open gallery
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: [ImagePicker.MediaType.Images], // ✅ Corrected
+      allowsEditing: true,
+      quality: 0.8,
+    });
 
-  // ✅ Check if the user selected an image (newer SDKs use result.canceled)
-  if (!result.canceled && result.assets && result.assets.length > 0) {
-    const imageUri = result.assets[0].uri;
+    console.log(result); // 🧠 Debug what comes back
 
-    const newMessage = {
-      id: nextId.current,
-      image: imageUri,
-      sender: 'you',
-    };
-    nextId.current += 1;
-    setMessages((prev) => [newMessage, ...prev]);
+    if (!result.canceled && result.assets?.length > 0) {
+      const imageUri = result.assets[0].uri;
 
-    // Chatmate auto-reply
-    setTimeout(() => {
-      const reply = {
+      const newMessage = {
         id: nextId.current,
-        text: 'Nice photo 📸',
-        sender: 'chatmate',
+        image: imageUri,
+        sender: 'you',
       };
       nextId.current += 1;
-      setMessages((prev) => [reply, ...prev]);
-    }, 1500);
-  } else {
-    console.log('User canceled image picker or no image selected.');
+      setMessages((prev) => [newMessage, ...prev]);
+
+      // Chatmate auto-reply
+      setTimeout(() => {
+        const reply = {
+          id: nextId.current,
+          text: 'Nice photo 📸',
+          sender: 'chatmate',
+        };
+        nextId.current += 1;
+        setMessages((prev) => [reply, ...prev]);
+      }, 1500);
+    } else {
+      console.log('User canceled image picker or no image selected.');
+    }
+  } catch (error) {
+    console.error('Error picking image:', error);
   }
 };
+
 
   return (
     <SafeAreaView style={styles.container}>
