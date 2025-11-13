@@ -18,6 +18,7 @@ export default function App() {
     <SQLiteProvider
       databaseName="authDatabase.db"
       onInit={async (db) => {
+        // ✅ Create necessary tables
         await db.execAsync(`
           -- Users table
           CREATE TABLE IF NOT EXISTS auth_users (
@@ -27,11 +28,11 @@ export default function App() {
             password TEXT NOT NULL
           );
 
-          -- Messages table (supports multiple users)
+          -- Messages table
           CREATE TABLE IF NOT EXISTS messages (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             sender TEXT NOT NULL,
-            receiver TEXT NOT NULL,       -- Added receiver
+            receiver TEXT NOT NULL,
             message TEXT NOT NULL,
             created_at TEXT DEFAULT CURRENT_TIMESTAMP
           );
@@ -44,6 +45,17 @@ export default function App() {
             created_at TEXT DEFAULT CURRENT_TIMESTAMP
           );
         `);
+
+        // ✅ Add missing column for profile image (safe check)
+        try {
+          await db.runAsync("ALTER TABLE auth_users ADD COLUMN profileUri TEXT;");
+          console.log("✅ Added profileUri column to auth_users");
+        } catch (error) {
+          // Ignore 'duplicate column' error if it already exists
+          if (!error.message.includes("duplicate column")) {
+            console.error("Error adding profileUri column:", error);
+          }
+        }
       }}
     >
       <NavigationContainer>
@@ -73,7 +85,7 @@ export default function App() {
           <Stack.Screen
             name="Messenger"
             component={MessengerScreen}
-            options={{ headerShown: false }} // Messenger has its own header
+            options={{ headerShown: false }}
           />
           <Stack.Screen
             name="Comments"

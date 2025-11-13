@@ -11,8 +11,8 @@ import {
   TouchableOpacity,
   StatusBar,
   Keyboard,
+  Image,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
 import { useSQLiteContext } from "expo-sqlite";
 
 const MessengerScreen = ({ route, navigation }) => {
@@ -23,6 +23,26 @@ const MessengerScreen = ({ route, navigation }) => {
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState("");
   const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const [currentUserPic, setCurrentUserPic] = useState(null);
+  const [chatWithUserPic, setChatWithUserPic] = useState(null);
+
+  // Fetch user profile pictures
+  const loadUserPics = async () => {
+    try {
+      const current = await db.getFirstAsync(
+        "SELECT profileUri FROM auth_users WHERE name = ?",
+        [currentUser.name]
+      );
+      const chatWith = await db.getFirstAsync(
+        "SELECT profileUri FROM auth_users WHERE name = ?",
+        [chatWithUser.name]
+      );
+      setCurrentUserPic(current?.profileUri || null);
+      setChatWithUserPic(chatWith?.profileUri || null);
+    } catch (err) {
+      console.error("Load user pics error:", err);
+    }
+  };
 
   // Create messages table
   const createTable = async () => {
@@ -76,9 +96,14 @@ const MessengerScreen = ({ route, navigation }) => {
   };
 
   useEffect(() => {
-    createTable().then(() => loadMessages());
+    createTable().then(() => {
+      loadMessages();
+      loadUserPics();
+    });
 
-    const showSub = Keyboard.addListener("keyboardDidShow", (e) => setKeyboardHeight(e.endCoordinates.height));
+    const showSub = Keyboard.addListener("keyboardDidShow", (e) =>
+      setKeyboardHeight(e.endCoordinates.height)
+    );
     const hideSub = Keyboard.addListener("keyboardDidHide", () => setKeyboardHeight(0));
 
     return () => {
@@ -89,20 +114,24 @@ const MessengerScreen = ({ route, navigation }) => {
 
   const renderItem = ({ item }) => {
     const isMe = item.sender === currentUser.name;
+    const profilePic = isMe ? currentUserPic : chatWithUserPic;
+
     return (
       <View style={[styles.messageRow, isMe ? styles.rowRight : styles.rowLeft]}>
         {!isMe && (
-          <View style={styles.chatHead}>
-            <Ionicons name="person-circle-outline" size={36} color="#777" />
-          </View>
+          <Image
+            source={profilePic ? { uri: profilePic } : require("./assets/default.png")}
+            style={styles.chatHeadImage}
+          />
         )}
         <View style={[styles.messageBubble, isMe ? styles.myMessage : styles.otherMessage]}>
           <Text style={isMe ? styles.myMessageText : styles.otherMessageText}>{item.message}</Text>
         </View>
         {isMe && (
-          <View style={styles.chatHead}>
-            <Ionicons name="person-circle-outline" size={36} color="#0084ff" />
-          </View>
+          <Image
+            source={profilePic ? { uri: profilePic } : require("./assets/default.png")}
+            style={styles.chatHeadImage}
+          />
         )}
       </View>
     );
@@ -114,49 +143,41 @@ const MessengerScreen = ({ route, navigation }) => {
 
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
         keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
       >
-        <View style={[styles.container, { marginBottom: keyboardHeight }]}>
-          {/* Header */}
-          <View style={styles.header}>
-            <TouchableOpacity onPress={() => navigation.goBack()}>
-              <Ionicons name="arrow-back" size={26} color="#fff" />
-            </TouchableOpacity>
-            <View style={styles.headerCenter}>
-              <Text style={styles.headerName}>{chatWithUser.name}</Text>
-              <Text style={styles.headerStatus}>Active now</Text>
-            </View>
-            <View style={styles.headerRight}>
-              <Ionicons name="call-outline" size={22} color="#fff" style={styles.headerIcon} />
-              <Ionicons name="videocam-outline" size={22} color="#fff" />
-            </View>
-          </View>
+        {/* Header */}
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+            <Text style={styles.backText}>◀ Back</Text>
+          </TouchableOpacity>
+          <Text style={styles.headerName}>{chatWithUser.name}</Text>
+          <View style={{ width: 60 }} />
+        </View>
 
-          {/* Messages */}
-          <FlatList
-            ref={flatListRef}
-            data={messages}
-            keyExtractor={(item) => item.id.toString()}
-            renderItem={renderItem}
-            contentContainerStyle={{ paddingVertical: 10 }}
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
+        {/* Messages */}
+        <FlatList
+          ref={flatListRef}
+          data={messages}
+          keyExtractor={(item) => item.id.toString()}
+          renderItem={renderItem}
+          contentContainerStyle={{ paddingVertical: 10 }}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        />
+
+        {/* Input */}
+        <View style={[styles.inputRow, { marginBottom: keyboardHeight }]}>
+          <TextInput
+            style={styles.input}
+            placeholder="Type a message..."
+            value={newMessage}
+            onChangeText={setNewMessage}
+            multiline
           />
-
-          {/* Input */}
-          <View style={styles.inputRow}>
-            <TextInput
-              style={styles.input}
-              placeholder="Type a message..."
-              value={newMessage}
-              onChangeText={setNewMessage}
-              multiline
-            />
-            <TouchableOpacity style={styles.sendButton} onPress={sendMessage}>
-              <Ionicons name="send" size={20} color="#fff" />
-            </TouchableOpacity>
-          </View>
+          <TouchableOpacity style={styles.sendButton} onPress={sendMessage}>
+            <Text style={{ color: "#fff", fontWeight: "bold" }}>Send</Text>
+          </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -173,26 +194,15 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     justifyContent: "space-between",
   },
-  headerCenter: { flex: 1, alignItems: "center" },
-  headerName: { color: "#fff", fontSize: 17, fontWeight: "700" },
-  headerStatus: { color: "#d4e7ff", fontSize: 13 },
-  headerRight: { flexDirection: "row", alignItems: "center" },
-  headerIcon: { marginRight: 12 },
+  backButton: { padding: 4 },
+  backText: { color: "#fff", fontSize: 16, fontWeight: "bold" },
+  headerName: { color: "#fff", fontSize: 18, fontWeight: "bold", textAlign: "center", flex: 1 },
   container: { flex: 1 },
   messageRow: { flexDirection: "row", alignItems: "flex-end", marginVertical: 6, paddingHorizontal: 10 },
   rowLeft: { justifyContent: "flex-start" },
   rowRight: { justifyContent: "flex-end" },
-  chatHead: { width: 36, height: 36, alignItems: "center", justifyContent: "center" },
-  messageBubble: {
-    padding: 10,
-    borderRadius: 18,
-    maxWidth: "70%",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
-  },
+  chatHeadImage: { width: 36, height: 36, borderRadius: 18, marginHorizontal: 4 },
+  messageBubble: { padding: 10, borderRadius: 18, maxWidth: "70%" },
   myMessage: { backgroundColor: "#0084ff", marginLeft: 6 },
   otherMessage: { backgroundColor: "#f0f0f0", marginRight: 6 },
   myMessageText: { color: "#fff", fontSize: 16 },
@@ -216,7 +226,13 @@ const styles = StyleSheet.create({
     backgroundColor: "#f9f9f9",
     maxHeight: 100,
   },
-  sendButton: { backgroundColor: "#0084ff", borderRadius: 25, padding: 10 },
+  sendButton: {
+    backgroundColor: "#0084ff",
+    borderRadius: 25,
+    padding: 10,
+    justifyContent: "center",
+    alignItems: "center",
+  },
 });
 
 export default MessengerScreen;
