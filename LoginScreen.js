@@ -12,10 +12,12 @@ import {
   Image,
   Platform,
   FlatList,
+  ImageBackground,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { useSQLiteContext } from "expo-sqlite";
 import { Ionicons } from "@expo/vector-icons";
+import bgPhoto from './assets/Saturo.jpg';
 
 const LoginScreen = ({ navigation }) => {
   const db = useSQLiteContext();
@@ -113,6 +115,12 @@ const LoginScreen = ({ navigation }) => {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: "#fff" }}>
+            <ImageBackground
+              source={bgPhoto}
+              style={{ flex: 1 }}
+              resizeMode="cover"
+            >
+
       <KeyboardAvoidingView
         style={{ flex: 1, padding: 20 }}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -180,12 +188,13 @@ const LoginScreen = ({ navigation }) => {
                   setOtherUsers([]);
                   setProfileImage(null);
                 }}
-                color="#dc3545"
+                color="#ff00f2ff"
               />
             </View>
           </View>
         )}
       </KeyboardAvoidingView>
+      </ImageBackground>
     </SafeAreaView>
   );
 };

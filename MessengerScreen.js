@@ -120,7 +120,7 @@ const MessengerScreen = ({ route, navigation }) => {
       <View style={[styles.messageRow, isMe ? styles.rowRight : styles.rowLeft]}>
         {!isMe && (
           <Image
-            source={profilePic ? { uri: profilePic } : require("./assets/default.png")}
+            source={profilePic ? { uri: profilePic } : require("./assets/Saturo.jpg")}
             style={styles.chatHeadImage}
           />
         )}
@@ -129,7 +129,7 @@ const MessengerScreen = ({ route, navigation }) => {
         </View>
         {isMe && (
           <Image
-            source={profilePic ? { uri: profilePic } : require("./assets/default.png")}
+            source={profilePic ? { uri: profilePic } : require("./assets/Saturo.jpg")}
             style={styles.chatHeadImage}
           />
         )}
